@@ -2,5 +2,7 @@
   "name": "NAWAR GeoAI",
   "description": "Multi-season crop rotation and climate resilience planner powered by NASA Earth Observation data.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

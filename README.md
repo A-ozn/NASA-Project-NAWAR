@@ -2,6 +2,8 @@
 **Smart Multi-Season Crop Rotation & Climate Resilience Planner for Dry Regions**  
 *NASA Space Apps Challenge 2026 ("Field Shift: Adapting Farms with NASA Data") — Built by **NAWAR Team***
 
+**Live Application:** [https://nawar-geoai.ai.studio](https://nawar-geoai.ai.studio)
+
 > *"Helping dry lands bloom, one smart season at a time."*
 
 ---
@@ -58,14 +60,10 @@ Instead of recommending a single crop for a single season, NAWAR GeoAI plans **t
 
 ---
 
-## Running Locally & GitHub Pages
-No build step or backend server is required for static hosting:
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ayazashy/NAWAR.git
-   ```
-2. Serve the static files locally (for `fetch('crops.json')` to work without `file://` restrictions):
-   ```bash
-   python -m http.server 8080
-   ```
-3. Open `http://localhost:8080` in your browser, or enable **GitHub Pages** directly from the `main` branch root.
+## Live Access & Local Hosting
+- **Live Web App**: [https://nawar-geoai.ai.studio](https://nawar-geoai.ai.studio)
+- **Run Locally**: No build step or backend server is required. Serve the root directory with any static HTTP server:
+  ```bash
+  python -m http.server 8080
+  ```
+  Then open `http://localhost:8080` in your browser, or deploy directly from the `main` branch root with **GitHub Pages**.
