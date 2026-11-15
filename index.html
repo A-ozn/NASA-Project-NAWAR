@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NAWAR GeoAI - Multi-Season Crop Planning Platform</title>
+  <meta name="description"
+    content="Multi-season crop rotation and climate resilience planner powered by NASA Earth Observation data." />
+  <meta property="og:title" content="NAWAR GeoAI" />
+  <meta property="og:description"
+    content="Multi-season crop rotation and climate resilience planner powered by NASA Earth Observation data." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- Top Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand-group" id="brandHomeTrigger" role="button" tabindex="0">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22V10" />
+            <path d="M12 14C8.5 14 5 11.5 5 7c4.5 0 7 2.5 7 7Z" />
+            <path d="M12 11c3.5 0 7-2.5 7-7-4.5 0-7 2.5-7 7Z" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title" data-i18n="appTitle">NAWAR GeoAI</h1>
+          <p class="brand-tagline" data-i18n="tagline">Helping dry lands bloom, one smart season at a time.</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <span class="meta-text" data-i18n="headerMeta">NASA Space Apps Challenge 2026 · Field Shift</span>
+        <button type="button" id="langToggleBtn" class="lang-btn" data-i18n="langBtn">العربية</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- STAGE 0: WELCOME SCREEN -->
+  <section id="welcomeStage" class="stage-view active-stage">
+    <div class="welcome-card">
+      <p class="welcome-kicker" data-i18n="welcomeBadge">Multi-Season Agro-Climate Resilience Planner</p>
+      <h2 class="welcome-title" data-i18n="welcomeTitle">
+        Plan 3 Farming Seasons Ahead with NASA Satellite Data
+      </h2>
+      <p class="welcome-desc" data-i18n="welcomeDesc">
+        Pin your farm anywhere in the world, specify your soil and crop history, and let NAWAR GeoAI fetch live NASA
+        POWER climatology and SRTM elevation to build and stress-test a 3-season rotation plan.
+      </p>
+
+      <div class="welcome-pillars">
+        <div class="pillar-card">
+          <div class="pillar-title" data-i18n="welcomePillar1Title">01. Pin Land &amp; NASA Telemetry</div>
+          <p class="pillar-desc" data-i18n="welcomePillar1Desc">
+            Drop a map pin or pick an arid benchmark site to pull live NASA POWER temperature, rainfall, solar, and SRTM elevation data.
+          </p>
+        </div>
+        <div class="pillar-card">
+          <div class="pillar-title" data-i18n="welcomePillar2Title">02. Compare 3 Rotation Strategies</div>
+          <p class="pillar-desc" data-i18n="welcomePillar2Desc">
+            Contrast Status Quo monoculture against a priority-weighted Primary Rotation and a Conservative Dryland Buffer.
+          </p>
+        </div>
+        <div class="pillar-card">
+          <div class="pillar-title" data-i18n="welcomePillar3Title">03. Stress-Test Future Climate</div>
+          <p class="pillar-desc" data-i18n="welcomePillar3Desc">
+            Simulate up to +4.0°C warming and -40% to +20% rainfall shifts to inspect water deficits and heat thresholds.
+          </p>
+        </div>
+      </div>
+
+      <div class="welcome-cta-wrap">
+        <button type="button" id="startJourneyBtn" class="primary-cta-btn welcome-start-btn"
+          data-i18n="startJourneyBtn">
+          Start Guided Farm Setup
+        </button>
+      </div>
+
+      <div class="demo-presets-welcome">
+        <p class="demo-presets-label" data-i18n="demoPresetsWelcomeLabel">Or explore immediately with an arid demo site:</p>
+        <div id="welcomeDemoPresets" class="demo-presets-row"></div>
+      </div>
+
+      <!-- Saved Gardens List -->
+      <div id="savedGardensSection" class="saved-gardens-section hidden-block">
+        <h3 class="sub-heading" data-i18n="savedGardensTitle">My Saved Gardens</h3>
+        <div id="savedGardensGrid" class="saved-gardens-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAGE 1: STEP-BY-STEP GUIDED WIZARD -->
+  <section id="wizardStage" class="stage-view">
+    <div class="wizard-shell">
+      <div class="wizard-progress-bar" role="navigation" aria-label="Setup Progress">
+        <button type="button" class="wiz-prog-item active" data-wiz-step="1">
+          <span class="wiz-prog-label" data-i18n="wizStep1Label">1. Region &amp; Demo</span>
+        </button>
+        <button type="button" class="wiz-prog-item" data-wiz-step="2" id="wizTab2">
+          <span class="wiz-prog-label" data-i18n="wizStep2Label">2. Exact Map Pin</span>
+        </button>
+        <button type="button" class="wiz-prog-item" data-wiz-step="3" id="wizTab3" disabled>
+          <span class="wiz-prog-label" data-i18n="wizStep3Label">3. Soil &amp; Crop</span>
+        </button>
+        <button type="button" class="wiz-prog-item" data-wiz-step="4" id="wizTab4" disabled>
+          <span class="wiz-prog-label" data-i18n="wizStep4Label">4. Goal &amp; Build</span>
+        </button>
+      </div>
+
+      <!-- WIZARD STEP 1 -->
+      <div id="wizStep1" class="wizard-step-card active-wiz-step">
+        <div class="wiz-step-header">
+          <div>
+            <h2 class="wiz-step-title" data-i18n="step1Title">Where is your farm or garden located?</h2>
+            <p class="wiz-step-sub" data-i18n="step1Sub">
+              Choose an arid demo site, select a country and city, or jump straight to pinning your coordinates on the map.
+            </p>
+          </div>
+          <button type="button" id="useGpsDirectBtn" class="secondary-btn" data-i18n="useGpsDirectBtn">
+            Use My GPS Location
+          </button>
+        </div>
+
+        <div class="wiz-section-block">
+          <h3 class="sub-heading" data-i18n="demoPresetsTitle">One-Click Arid Demo Sites</h3>
+          <div id="wizardDemoPresets" class="demo-presets-row"></div>
+        </div>
+
+        <div class="wiz-section-block">
+          <h3 class="sub-heading" data-i18n="selectCountryPrompt">Or Browse by Country</h3>
+          <div id="countryCardsGrid" class="country-cards-grid"></div>
+        </div>
+
+        <div id="regionPickerPanel" class="region-picker-panel hidden-block">
+          <div class="region-picker-header">
+            <h3 class="sub-heading" data-i18n="chooseRegionTitle">Select or Filter Your City / Region</h3>
+            <span id="selectedCountryBadge" class="inline-meta-strong"></span>
+          </div>
+
+          <div class="city-search-row">
+            <input type="text" id="citySearchInput" class="text-input"
+              placeholder="Type your city, town, or agricultural area..." />
+            <button type="button" id="searchCityBtn" class="secondary-btn" data-i18n="searchCityBtn">
+              Find City
+            </button>
+          </div>
+          <div id="citySearchStatus" class="search-status-msg hidden-block"></div>
+          <div id="regionCardsGrid" class="region-cards-grid"></div>
+        </div>
+
+        <div class="not-in-list-bar">
+          <button type="button" id="notInListMapBtn" class="outline-action-btn" data-i18n="notInListBtn">
+            Pin Any Custom Coordinates on the Interactive Map
+          </button>
+        </div>
+      </div>
+
+      <!-- WIZARD STEP 2: Interactive Leaflet Map -->
+      <div id="wizStep2" class="wizard-step-card">
+        <div class="wiz-step-header">
+          <div>
+            <h2 class="wiz-step-title" data-i18n="step2Title">Pin your exact farm or garden on the map</h2>
+            <p class="wiz-step-sub" data-i18n="step2Sub">
+              Click anywhere on the map or drag the marker to capture exact latitude and longitude for NASA POWER &amp; SRTM queries.
+            </p>
+          </div>
+          <div class="current-area-chip">
+            <span data-i18n="selectedAreaLabel">Selected Area:</span>
+            <strong id="step2AreaName">-</strong>
+          </div>
+        </div>
+
+        <div class="demo-presets-inline">
+          <span class="field-label" data-i18n="quickDemoLabel">Quick Presets:</span>
+          <div id="wizMapDemoPresets" class="demo-presets-row"></div>
+        </div>
+
+        <div class="map-wrapper">
+          <div class="map-toolbar">
+            <div class="map-layer-group">
+              <button type="button" class="map-layer-btn active" data-layer="street" data-i18n="mapLayerStreet">Street Map</button>
+              <button type="button" class="map-layer-btn" data-layer="sat" data-i18n="mapLayerSat">Satellite View</button>
+            </div>
+            <button type="button" id="useGpsBtn" class="gps-btn" data-i18n="useGpsBtn">My GPS Location</button>
+          </div>
+          <div id="farmMap" class="farm-map" aria-label="Interactive Farm Map"></div>
+        </div>
+
+        <div class="field-row-2 coord-row">
+          <div class="field-group">
+            <label for="latInput" class="field-label" data-i18n="latLabel">Latitude</label>
+            <input type="number" id="latInput" class="text-input tabular-nums" step="0.0001" />
+          </div>
+          <div class="field-group">
+            <label for="lonInput" class="field-label" data-i18n="lonLabel">Longitude</label>
+            <input type="number" id="lonInput" class="text-input tabular-nums" step="0.0001" />
+          </div>
+        </div>
+
+        <div class="wizard-nav-footer">
+          <button type="button" id="backToStep1Btn" class="secondary-btn" data-i18n="backBtn">Back</button>
+          <button type="button" id="toStep3Btn" class="primary-cta-btn nav-next-btn"
+            data-i18n="confirmLocationBtn">Confirm Location &amp; Continue</button>
+        </div>
+      </div>
+
+      <!-- WIZARD STEP 3: Soil Type, Previous Crop & Starting Season -->
+      <div id="wizStep3" class="wizard-step-card">
+        <div class="wiz-step-header">
+          <div>
+            <h2 class="wiz-step-title" data-i18n="step3Title">Tell us about your soil and last crop</h2>
+            <p class="wiz-step-sub" data-i18n="step3Sub">
+              Crop rotation rules penalize repeating the same botanical family and reward nitrogen cycling after heavy feeders.
+            </p>
+          </div>
+        </div>
+
+        <div class="wiz-section-block">
+          <label class="sub-heading" data-i18n="soilTypeLabel">Soil Type</label>
+          <div id="soilCardsGrid" class="soil-cards-grid"></div>
+        </div>
+
+        <div class="field-row-2">
+          <div class="field-group">
+            <label for="prevCropSelect" class="field-label" data-i18n="prevCropLabel">Previous Crop (from crops.json)</label>
+            <select id="prevCropSelect" class="select-input"></select>
+          </div>
+
+          <div class="field-group">
+            <label for="seasonSelect" class="field-label" data-i18n="startSeasonLabel">Starting Season</label>
+            <select id="seasonSelect" class="select-input"></select>
+          </div>
+        </div>
+
+        <div class="wizard-nav-footer">
+          <button type="button" id="backToStep2Btn" class="secondary-btn" data-i18n="backBtn">Back</button>
+          <button type="button" id="toStep4Btn" class="primary-cta-btn nav-next-btn"
+            data-i18n="nextBtn">Continue</button>
+        </div>
+      </div>
+
+      <!-- WIZARD STEP 4: Farmer Priority & Summary Review -->
+      <div id="wizStep4" class="wizard-step-card">
+        <div class="wiz-step-header">
+          <div>
+            <h2 class="wiz-step-title" data-i18n="step4Title">What is your main priority for the next 3 seasons?</h2>
+            <p class="wiz-step-sub" data-i18n="step4Sub">
+              We build 3 strategies for comparison and weight the Primary Recommended plan toward your chosen goal.
+            </p>
+          </div>
+        </div>
+
+        <div class="priority-grid-large">
+          <button type="button" class="priority-btn active" data-priority="water" aria-pressed="true">
+            <span class="prio-title" data-i18n="prio_water">Save Water</span>
+            <span class="prio-sub" data-i18n="prio_water_sub">Favor low-ET, drought-tolerant crops with minimal irrigation deficit.</span>
+          </button>
+          <button type="button" class="priority-btn" data-priority="profit" aria-pressed="false">
+            <span class="prio-title" data-i18n="prio_profit">Maximize Profit</span>
+            <span class="prio-sub" data-i18n="prio_profit_sub">Favor high net-return cash crops suited to local thermal limits.</span>
+          </button>
+          <button type="button" class="priority-btn" data-priority="soil" aria-pressed="false">
+            <span class="prio-title" data-i18n="prio_soil">Improve Soil Health</span>
+            <span class="prio-sub" data-i18n="prio_soil_sub">Favor Fabaceae nitrogen fixers, deep roots, and anti-erosion cover.</span>
+          </button>
+        </div>
+
+        <div class="field-group" style="margin-bottom: 18px;">
+          <label for="gardenNameInput" class="field-label" data-i18n="gardenNameLabel">Farm / Plot Name (Optional)</label>
+          <input type="text" id="gardenNameInput" class="text-input" placeholder="e.g. Bisha Terrace Plot, South Field..." />
+        </div>
+
+        <div class="summary-review-card">
+          <h3 class="sub-heading" data-i18n="reviewSummaryTitle">Farm Configuration Summary</h3>
+          <div id="wizardSummaryGrid" class="wizard-summary-grid"></div>
+        </div>
+
+        <div class="wizard-nav-footer">
+          <button type="button" id="backToStep3Btn" class="secondary-btn" data-i18n="backBtn">Back</button>
+          <button type="button" id="generateBtn" class="primary-cta-btn nav-next-btn" data-i18n="generateBtn">
+            Fetch NASA Data &amp; Build 3-Season Plan
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAGE 2: PERSONALIZED RESULTS DASHBOARD -->
+  <div id="dashboardStage" class="stage-view">
+    <nav class="pipeline-bar" aria-label="Analysis Pipeline">
+      <div class="pipeline-inner">
+        <button type="button" class="pipeline-step step-active" data-target="dashMapSection" data-i18n="step1">1. Location &amp; Map</button>
+        <span class="pipeline-arrow">→</span>
+        <button type="button" class="pipeline-step step-active" data-action="edit-inputs" data-i18n="step2">2. Farm Inputs</button>
+        <span class="pipeline-arrow">→</span>
+        <button type="button" class="pipeline-step step-active" data-target="nasaSection" data-i18n="step3">3. NASA Data</button>
+        <span class="pipeline-arrow">→</span>
+        <button type="button" class="pipeline-step step-active" data-target="strategiesSection" data-i18n="step4">4. 3 Strategies</button>
+        <span class="pipeline-arrow">→</span>
+        <button type="button" class="pipeline-step step-active" data-target="seasonCardsSection" data-i18n="step5">5. Season Plan</button>
+        <span class="pipeline-arrow">→</span>
+        <button type="button" class="pipeline-step step-active" data-target="scenarioSection" data-i18n="step6">6. Stress Test</button>
+        <span class="pipeline-arrow">→</span>
+        <button type="button" class="pipeline-step step-active" data-target="supportSection" data-i18n="step7">7. Local Review</button>
+      </div>
+    </nav>
+
+    <main class="dashboard-container">
+      <!-- Farm Context Bar -->
+      <div class="farm-context-bar panel-card">
+        <div class="farm-context-info">
+          <div id="gardenSwitcherWrap" class="garden-switcher-wrap hidden-block">
+            <label for="gardenSelect" class="garden-switch-label" data-i18n="switchGardenLabel">Active Plot:</label>
+            <select id="gardenSelect" class="garden-select-input"></select>
+          </div>
+          <h2 id="activeLocationLabel" class="context-location-title">-</h2>
+          <p id="activeFarmMetaLine" class="context-meta-line">-</p>
+        </div>
+        <div class="farm-context-actions">
+          <button type="button" id="addGardenBtn" class="primary-cta-btn add-garden-btn" data-i18n="addGardenBtn">+ Plan Another Plot</button>
+          <button type="button" id="editLocationBtn" class="secondary-btn" data-i18n="editLocationBtn">Wizard: Location</button>
+          <button type="button" id="editInputsBtn" class="secondary-btn" data-i18n="editInputsBtn">Edit Soil / Crop / Goal</button>
+          <button type="button" id="newFarmBtn" class="secondary-btn" data-i18n="newFarmBtn">Home</button>
+        </div>
+      </div>
+
+      <!-- Interactive Map + Live Quick Inputs Strip -->
+      <section id="dashMapSection" class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title" data-i18n="dashMapTitle">Interactive Farm Map &amp; Arid Benchmarks</h2>
+            <p class="panel-sub" data-i18n="dashMapSub">Click anywhere on the map to relocate the farm pin and refresh live NASA POWER + SRTM data.</p>
+          </div>
+          <div class="dash-coord-readout tabular-nums" id="dashCoordReadout">--</div>
+        </div>
+
+        <div class="dash-map-layout">
+          <div class="dash-map-col">
+            <div class="demo-presets-inline">
+              <span class="field-label" data-i18n="quickDemoLabel">Arid Demo Presets:</span>
+              <div id="dashDemoPresets" class="demo-presets-row"></div>
+            </div>
+            <div class="map-wrapper" style="margin-bottom: 0;">
+              <div class="map-toolbar">
+                <div class="map-layer-group">
+                  <button type="button" class="map-layer-btn active" data-layer="street" data-i18n="mapLayerStreet">Street Map</button>
+                  <button type="button" class="map-layer-btn" data-layer="sat" data-i18n="mapLayerSat">Satellite View</button>
+                </div>
+                <button type="button" id="dashGpsBtn" class="gps-btn" data-i18n="useGpsBtn">My GPS Location</button>
+              </div>
+              <div id="dashFarmMap" class="farm-map dash-farm-map" aria-label="Dashboard Interactive Farm Map"></div>
+            </div>
+          </div>
+
+          <!-- Quick Live Farm Controls right beside the map -->
+          <div class="dash-controls-col">
+            <h3 class="sub-heading" data-i18n="quickAdjustTitle">Adjust Field Parameters</h3>
+            <div class="field-group">
+              <label for="dashPrevCropSelect" class="field-label" data-i18n="prevCropLabel">Previous Crop</label>
+              <select id="dashPrevCropSelect" class="select-input"></select>
+            </div>
+            <div class="field-group">
+              <label for="dashSoilSelect" class="field-label" data-i18n="soilTypeShort">Soil Type</label>
+              <select id="dashSoilSelect" class="select-input">
+                <option value="sandy">Sandy</option>
+                <option value="loamy">Loamy</option>
+                <option value="clay">Clay</option>
+                <option value="saline">Saline / Arid</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="dashSeasonSelect" class="field-label" data-i18n="startSeasonShort">Starting Season</label>
+              <select id="dashSeasonSelect" class="select-input"></select>
+            </div>
+            <div class="field-group">
+              <label for="dashPrioritySelect" class="field-label" data-i18n="priorityShort">Farmer Priority</label>
+              <select id="dashPrioritySelect" class="select-input">
+                <option value="water">Save Water</option>
+                <option value="profit">Maximize Profit</option>
+                <option value="soil">Improve Soil Health</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1. NASA Earth Observation Summary Bar -->
+      <section id="nasaSection" class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title" data-i18n="nasaPanelTitle">NASA Earth Observation &amp; Terrain Summary</h2>
+            <p class="panel-sub" data-i18n="nasaPanelSub">Climatology from NASA POWER Agroclimatology API + SRTM Elevation &amp; Runoff Risk</p>
+          </div>
+          <span id="nasaSourceBadge" class="status-badge status-live" data-i18n="nasaSourceLive">Live NASA Data</span>
+        </div>
+
+        <div class="telemetry-grid telemetry-grid-5">
+          <div class="telemetry-box">
+            <div class="telemetry-label" data-i18n="metricMaxTemp">Peak / Mean Max Temp</div>
+            <div id="valMaxTemp" class="telemetry-value tabular-nums">--</div>
+            <div id="subMaxTemp" class="telemetry-sub tabular-nums">--</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="telemetry-label" data-i18n="metricMinTemp">Coolest / Mean Min Temp</div>
+            <div id="valMinTemp" class="telemetry-value tabular-nums">--</div>
+            <div id="subMinTemp" class="telemetry-sub tabular-nums">--</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="telemetry-label" data-i18n="metricRain">Annual Rainfall</div>
+            <div id="valRain" class="telemetry-value tabular-nums">--</div>
+            <div id="subRain" class="telemetry-sub tabular-nums">--</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="telemetry-label" data-i18n="metricSolar">Solar Irradiance</div>
+            <div id="valSolar" class="telemetry-value tabular-nums">--</div>
+            <div id="subSolar" class="telemetry-sub tabular-nums">--</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="telemetry-label" data-i18n="metricElev">SRTM Elevation &amp; Runoff</div>
+            <div id="valElev" class="telemetry-value tabular-nums">--</div>
+            <div id="subElev" class="telemetry-sub">--</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 3-Strategy Comparison Engine -->
+      <section id="strategiesSection" class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title" data-i18n="strategiesTitle">3-Strategy Comparison Engine</h2>
+            <p class="panel-sub" data-i18n="strategySelectHint">Compare Status Quo monoculture against the Primary Recommended Rotation and Conservative Dryland Buffer.</p>
+          </div>
+        </div>
+        <div id="strategyCardsContainer" class="strategy-cards-grid"></div>
+      </section>
+
+      <!-- 3. Season Cards + Plan Table -->
+      <section id="seasonCardsSection" class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title" data-i18n="seasonCardsTitle">3-Season Rotation Breakdown</h2>
+            <p class="panel-sub" data-i18n="planTableClickHint">Inspect agronomic roles, water demand, and field risk indicators. Click any season for full crop diagnostics.</p>
+          </div>
+          <span id="activeStrategyLabel" class="location-subtitle"></span>
+        </div>
+
+        <!-- 3 Season Cards -->
+        <div id="seasonCardsGrid" class="season-cards-grid"></div>
+
+        <!-- Detailed Comparison Table -->
+        <div class="table-responsive" style="margin-top: 18px;">
+          <table class="plan-table">
+            <thead>
+              <tr>
+                <th data-i18n="colSeason">Season</th>
+                <th data-i18n="colCrop">Crop &amp; Family</th>
+                <th data-i18n="colReason">Agronomic Rationale</th>
+                <th data-i18n="colWater">Water Need vs Rain</th>
+                <th data-i18n="colRisk">Stress Status</th>
+                <th data-i18n="colReturn">Est. Net Return</th>
+              </tr>
+            </thead>
+            <tbody id="planTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. Climate Scenario Stress-Testing & Interactive Charts -->
+      <section id="scenarioSection" class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title" data-i18n="scenarioTitle">Climate Scenario Stress-Testing</h2>
+            <p class="panel-sub" data-i18n="scenarioSubtitle">Use quick presets or live sliders to test crop heat-stress thresholds and water deficits across all 3 seasons.</p>
+          </div>
+          <div class="scenario-preset-group" role="group" aria-label="Climate Stress Presets">
+            <button type="button" class="scenario-preset-btn active" data-temp="0" data-rain="0" data-i18n="presetBaseline">Baseline</button>
+            <button type="button" class="scenario-preset-btn" data-temp="2" data-rain="0" data-i18n="presetWarm2">+2°C Warming</button>
+            <button type="button" class="scenario-preset-btn" data-temp="0" data-rain="-20" data-i18n="presetDry20">-20% Rainfall</button>
+          </div>
+        </div>
+
+        <!-- Interactive Range Sliders -->
+        <div class="stress-sliders-grid">
+          <div class="slider-control-box">
+            <div class="slider-label-row">
+              <label for="tempShiftSlider" class="field-label" data-i18n="tempSliderLabel">Temperature Shift</label>
+              <span id="tempShiftReadout" class="slider-readout tabular-nums">+0.0°C</span>
+            </div>
+            <input type="range" id="tempShiftSlider" class="range-slider" min="0" max="4" step="0.5" value="0" />
+            <div class="slider-bounds tabular-nums">
+              <span>0.0°C</span>
+              <span>+2.0°C</span>
+              <span>+4.0°C</span>
+            </div>
+          </div>
+
+          <div class="slider-control-box">
+            <div class="slider-label-row">
+              <label for="rainShiftSlider" class="field-label" data-i18n="rainSliderLabel">Rainfall Change</label>
+              <span id="rainShiftReadout" class="slider-readout tabular-nums">0%</span>
+            </div>
+            <input type="range" id="rainShiftSlider" class="range-slider" min="-40" max="20" step="5" value="0" />
+            <div class="slider-bounds tabular-nums">
+              <span>-40%</span>
+              <span>0%</span>
+              <span>+20%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Climate Confidence Score Banner -->
+        <div id="confidenceBadge" class="confidence-banner conf-high"></div>
+
+        <!-- Per-Season Stress Diagnostics -->
+        <div id="scenarioCardsGrid" class="scenario-cards-grid"></div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid-2" style="margin-top: 18px;">
+          <div class="chart-panel-inner">
+            <h3 class="sub-heading" data-i18n="chartWaterTitle">Seasonal Crop Water Demand vs. Effective Rainfall (mm)</h3>
+            <div class="chart-box">
+              <canvas id="waterBalanceChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-panel-inner">
+            <h3 class="sub-heading" data-i18n="chartStrategiesTitle">Scenario Resilience Across 3 Strategies (Pass Score /3)</h3>
+            <div class="chart-box">
+              <canvas id="strategyScenarioChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Farmer Decision-Support, Satellite vs Ground Truth & Glossary -->
+      <section id="supportSection" class="support-grid">
+        <!-- Information Gaps & Local Review Box -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h2 class="panel-title" data-i18n="infoGapsTitle">Information Gaps &amp; Local Review</h2>
+          </div>
+          <p class="support-lead" data-i18n="infoGapsLead">
+            NAWAR GeoAI supports rather than replaces farmer judgment. Verify these critical field conditions locally before planting:
+          </p>
+          <ul class="local-gaps-list" id="localGapsList"></ul>
+        </div>
+
+        <!-- Satellite vs. Ground Truth (NAWAR Field Node Concept) -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h2 class="panel-title" data-i18n="fieldNodeTitle">Satellite vs. Ground Truth: NAWAR Field Node</h2>
+          </div>
+          <p class="support-lead" data-i18n="fieldNodeDesc">
+            NASA POWER climatology grids (~55 km) and SMAP pixels (9–36 km) capture regional climate but miss field-level microclimates. Our low-cost NAWAR Field Node soil moisture &amp; temperature probe bridges that last-meter gap.
+          </p>
+
+          <div class="field-node-flow">
+            <div class="fn-step-box">
+              <div class="fn-step-title" data-i18n="fnStep1Title">1. Satellite Grid (~55 km)</div>
+              <p class="fn-step-desc" data-i18n="fnStep1Desc">NASA POWER &amp; SRTM provide regional temperature, rainfall, solar radiation, and elevation baselines.</p>
+            </div>
+            <div class="fn-step-box">
+              <div class="fn-step-title" data-i18n="fnStep2Title">2. NAWAR Field Node</div>
+              <p class="fn-step-desc" data-i18n="fnStep2Desc">In-field root-zone probe logs real soil moisture (%) and canopy-level temperature every 15 minutes.</p>
+            </div>
+            <div class="fn-step-box">
+              <div class="fn-step-title" data-i18n="fnStep3Title">3. Calibrated Plan</div>
+              <p class="fn-step-desc" data-i18n="fnStep3Desc">Sensor residuals bias-correct satellite ET and trigger localized irrigation and heat-stress alerts.</p>
+            </div>
+          </div>
+
+          <div class="datasets-list">
+            <div class="dataset-item">
+              <div class="dataset-top">
+                <span class="dataset-name">NASA POWER AG</span>
+                <span class="dataset-tag tag-active" data-i18n="dsActive">Live API</span>
+              </div>
+              <p class="dataset-desc" data-i18n="dsDescPower">T2M_MAX, T2M_MIN, PRECTOTCORR &amp; ALLSKY_SFC_SW_DWN.</p>
+            </div>
+            <div class="dataset-item">
+              <div class="dataset-top">
+                <span class="dataset-name">SRTM Elevation</span>
+                <span class="dataset-tag tag-active" data-i18n="dsActive">Live API</span>
+              </div>
+              <p class="dataset-desc" data-i18n="dsDescSrtm">Terrain elevation (m) for runoff and drainage risk checks.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Collapsible Farmer's Science Glossary -->
+      <section class="panel-card">
+        <details class="glossary-accordion">
+          <summary class="glossary-summary">
+            <span class="panel-title" data-i18n="glossaryTitle">Farmer's Science Glossary</span>
+            <span class="glossary-hint" data-i18n="glossaryToggleHint">Click to expand key agronomy &amp; climate terms</span>
+          </summary>
+          <div id="glossaryGrid" class="glossary-grid"></div>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL 1: Animated NASA Analysis Progress Modal -->
+  <div id="analysisModal" class="modal-backdrop hidden-modal" role="dialog" aria-modal="true"
+    aria-labelledby="analysisModalTitle">
+    <div class="modal-card">
+      <h3 id="analysisModalTitle" class="modal-title" data-i18n="analyzingTitle">Building Your 3-Season Smart Plan</h3>
+      <div class="analysis-progress-track">
+        <div id="analysisProgressBar" class="analysis-progress-fill"></div>
+      </div>
+      <ul class="analysis-steps-list">
+        <li id="anStep1" class="analysis-step-item" data-i18n="analyzingStep1">
+          Querying NASA POWER satellite climatology &amp; SRTM elevation...
+        </li>
+        <li id="anStep2" class="analysis-step-item" data-i18n="analyzingStep2">
+          Calculating seasonal water balance &amp; thermal suitability...
+        </li>
+        <li id="anStep3" class="analysis-step-item" data-i18n="analyzingStep3">
+          Comparing Status Quo, Primary Recommended &amp; Dryland Buffer rotations...
+        </li>
+        <li id="anStep4" class="analysis-step-item" data-i18n="analyzingStep4">
+          Running +2°C warming &amp; -20% rainfall stress diagnostics...
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Crop & Season Detail Modal -->
+  <div id="cropDetailModal" class="modal-backdrop hidden-modal" role="dialog" aria-modal="true"
+    aria-labelledby="cropModalTitle">
+    <div class="modal-card">
+      <div class="modal-header-row">
+        <div>
+          <span id="cropModalSeasonBadge" class="inline-meta-strong"></span>
+          <h3 id="cropModalTitle" class="modal-title"></h3>
+          <p id="cropModalFamily" class="field-label"></p>
+        </div>
+        <button type="button" id="closeCropModalBtn" class="secondary-btn" data-i18n="modalCloseBtn">Close</button>
+      </div>
+      <div id="cropModalBody" class="crop-modal-body"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p data-i18n="footerText">NAWAR GeoAI · Built for NASA Space Apps Challenge 2026 ("Field Shift: Adapting Farms with NASA Data")</p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script defer src="app.js"></script>
+</body>
+
+</html>
